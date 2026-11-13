@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' | Shop'">Shop</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<header th:fragment="header" class="site-header">
+    <div class="container header-row">
+        <a class="brand" th:href="@{/products}">Shop</a>
+        <form class="search" th:action="@{/products}" method="get" role="search">
+            <input type="search" name="q" placeholder="Search products" aria-label="Search products"
+                   th:value="${q}">
+            <input type="hidden" name="category" th:if="${selectedCategory != null}" th:value="${selectedCategory}">
+            <button type="submit">Search</button>
+        </form>
+        <a class="cart-link" th:href="@{/cart}" th:text="'Cart (' + ${cartItemCount ?: 0} + ')'">Cart (0)</a>
+    </div>
+    <nav class="container category-nav" aria-label="Categories">
+        <a th:href="@{/products}" th:classappend="${selectedCategory == null and q == null} ? 'active'">All</a>
+        <a th:each="c : ${categories ?: {}}"
+           th:href="@{/products(category=${c.slug})}"
+           th:classappend="${selectedCategory != null and selectedCategory == c.slug} ? 'active'"
+           th:attr="aria-current=${selectedCategory != null and selectedCategory == c.slug} ? 'page' : null"
+           th:text="${c.name}">Category</a>
+    </nav>
+</header>
+
+<div th:fragment="flash" class="flash-messages">
+    <p class="flash flash-success" th:if="${success != null}" th:text="${success}">Success</p>
+    <p class="flash flash-error" th:if="${error != null}" th:text="${error}">Error</p>
+</div>
+
+<footer th:fragment="footer" class="site-footer">
+    <div class="container">
+        <p>&copy; Shop. Prices in USD. Test payments only.</p>
+    </div>
+</footer>
+
+</body>
+</html>

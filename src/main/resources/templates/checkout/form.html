@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Checkout')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container checkout">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <h1>Checkout</h1>
+
+    <section class="order-summary">
+        <h2>Order summary</h2>
+        <table class="cart-table">
+            <thead>
+            <tr>
+                <th scope="col">Product</th>
+                <th scope="col">Unit price</th>
+                <th scope="col">Quantity</th>
+                <th scope="col">Line total</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="line : ${cart.lines()}">
+                <td th:text="${line.name()}">Name</td>
+                <td th:text="${@moneyFormatter.format(line.unitPrice())}">$0.00</td>
+                <td th:text="${line.quantity()}">1</td>
+                <td th:text="${@moneyFormatter.format(line.lineTotal())}">$0.00</td>
+            </tr>
+            </tbody>
+        </table>
+        <dl class="totals">
+            <dt>Total</dt>
+            <dd class="total" th:text="${@moneyFormatter.format(cart.total())}">$0.00</dd>
+        </dl>
+    </section>
+
+    <form class="checkout-form" th:action="@{/checkout}" th:object="${checkoutForm}" method="post" novalidate>
+        <div class="flash flash-error" th:if="${#fields.hasGlobalErrors()}">
+            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}">Error</p>
+        </div>
+
+        <fieldset>
+            <legend>Contact and shipping</legend>
+
+            <label for="fullName">Full name</label>
+            <input type="text" th:field="*{fullName}" autocomplete="name" maxlength="100">
+            <p class="error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></p>
+
+            <label for="email">Email</label>
+            <input type="email" th:field="*{email}" autocomplete="email" maxlength="254">
+            <p class="error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
+
+            <label for="addressLine1">Address line 1</label>
+            <input type="text" th:field="*{addressLine1}" autocomplete="address-line1" maxlength="200">
+            <p class="error" th:if="${#fields.hasErrors('addressLine1')}" th:errors="*{addressLine1}"></p>
+
+            <label for="addressLine2">Address line 2 (optional)</label>
+            <input type="text" th:field="*{addressLine2}" autocomplete="address-line2" maxlength="200">
+            <p class="error" th:if="${#fields.hasErrors('addressLine2')}" th:errors="*{addressLine2}"></p>
+
+            <label for="city">City</label>
+            <input type="text" th:field="*{city}" autocomplete="address-level2" maxlength="100">
+            <p class="error" th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></p>
+
+            <label for="postalCode">Postal code</label>
+            <input type="text" th:field="*{postalCode}" autocomplete="postal-code" maxlength="20">
+            <p class="error" th:if="${#fields.hasErrors('postalCode')}" th:errors="*{postalCode}"></p>
+
+            <label for="country">Country</label>
+            <input type="text" th:field="*{country}" autocomplete="country-name" maxlength="100">
+            <p class="error" th:if="${#fields.hasErrors('country')}" th:errors="*{country}"></p>
+        </fieldset>
+
+        <fieldset>
+            <legend>Payment</legend>
+
+            <label for="cardholderName">Cardholder name</label>
+            <input type="text" th:field="*{cardholderName}" autocomplete="cc-name" maxlength="100">
+            <p class="error" th:if="${#fields.hasErrors('cardholderName')}" th:errors="*{cardholderName}"></p>
+
+            <label for="cardNumber">Card number</label>
+            <input type="text" id="cardNumber" name="cardNumber" autocomplete="cc-number" inputmode="numeric">
+            <p class="error" th:if="${#fields.hasErrors('cardNumber')}" th:errors="*{cardNumber}"></p>
+
+            <div class="row">
+                <div>
+                    <label for="expiryMonth">Expiry month</label>
+                    <input type="number" th:field="*{expiryMonth}" autocomplete="cc-exp-month" min="1" max="12"
+                           placeholder="MM">
+                    <p class="error" th:if="${#fields.hasErrors('expiryMonth')}" th:errors="*{expiryMonth}"></p>
+                </div>
+                <div>
+                    <label for="expiryYear">Expiry year</label>
+                    <input type="number" th:field="*{expiryYear}" autocomplete="cc-exp-year" min="2000" max="2100"
+                           placeholder="YYYY">
+                    <p class="error" th:if="${#fields.hasErrors('expiryYear')}" th:errors="*{expiryYear}"></p>
+                </div>
+                <div>
+                    <label for="cvv">CVV</label>
+                    <input type="password" id="cvv" name="cvv" autocomplete="cc-csc" inputmode="numeric">
+                    <p class="error" th:if="${#fields.hasErrors('cvv')}" th:errors="*{cvv}"></p>
+                </div>
+            </div>
+        </fieldset>
+
+        <button type="submit" class="button primary">Pay now</button>
+    </form>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

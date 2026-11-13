@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${product.name})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <article class="product-detail">
+        <img th:src="@{${product.imageUrl}}" th:alt="${product.name}" width="480" height="360">
+        <div class="product-info">
+            <h1 th:text="${product.name}">Name</h1>
+            <p class="category">
+                <a th:href="@{/products(category=${product.category.slug})}" th:text="${product.category.name}">Category</a>
+            </p>
+            <p class="price" th:text="${@moneyFormatter.format(product.price)}">$0.00</p>
+            <p th:if="${product.inStock}" class="stock in-stock">In stock</p>
+            <p th:unless="${product.inStock}" class="stock out-of-stock">Out of stock</p>
+            <p class="description" th:text="${product.description}">Description</p>
+
+            <form class="add-to-cart" th:action="@{/cart/items}" th:object="${addToCartForm}" method="post">
+                <input type="hidden" th:field="*{productId}">
+                <label for="quantity">Quantity</label>
+                <input type="number" th:field="*{quantity}" min="1" max="99" step="1" required>
+                <button type="submit" th:if="${product.inStock}">Add to cart</button>
+                <button type="submit" th:unless="${product.inStock}" disabled>Out of stock</button>
+            </form>
+        </div>
+    </article>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

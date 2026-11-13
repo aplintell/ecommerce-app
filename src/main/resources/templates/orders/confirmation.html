@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Order confirmation')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <h1>Thank you for your order</h1>
+    <p>Order number: <strong class="order-number" th:text="${order.orderNumber}">0000</strong></p>
+
+    <table class="cart-table">
+        <thead>
+        <tr>
+            <th scope="col">Product</th>
+            <th scope="col">Unit price</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Line total</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${order.items}">
+            <td th:text="${item.productName}">Name</td>
+            <td th:text="${@moneyFormatter.format(item.unitPrice)}">$0.00</td>
+            <td th:text="${item.quantity}">1</td>
+            <td th:text="${@moneyFormatter.format(item.lineTotal)}">$0.00</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <dl class="totals">
+        <dt>Total</dt>
+        <dd class="total" th:text="${@moneyFormatter.format(order.total)}">$0.00</dd>
+    </dl>
+
+    <section class="order-details">
+        <h2>Payment</h2>
+        <p th:text="${order.maskedCard}">VISA &bull;&bull;&bull;&bull; 4242</p>
+
+        <h2>Shipping to</h2>
+        <address>
+            <span th:text="${order.customerName}">Name</span><br>
+            <span th:text="${order.addressLine1}">Address 1</span><br>
+            <th:block th:if="${order.addressLine2 != null}">
+                <span th:text="${order.addressLine2}">Address 2</span><br>
+            </th:block>
+            <span th:text="${order.postalCode + ' ' + order.city}">Postal code City</span><br>
+            <span th:text="${order.country}">Country</span>
+        </address>
+    </section>
+
+    <a class="button" th:href="@{/products}">Continue shopping</a>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>
