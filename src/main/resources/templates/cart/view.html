@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Your cart')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header}"></header>
+<main class="container">
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <h1>Your cart</h1>
+
+    <ul class="notices" th:unless="${cart.notices().isEmpty()}">
+        <li class="flash flash-warning" th:each="n : ${cart.notices()}" th:text="${n}">Notice</li>
+    </ul>
+
+    <div th:if="${cart.isEmpty()}" class="empty">
+        <p>Your cart is empty</p>
+        <a th:href="@{/products}">Continue shopping</a>
+    </div>
+
+    <div th:unless="${cart.isEmpty()}">
+        <table class="cart-table">
+            <thead>
+            <tr>
+                <th scope="col">Product</th>
+                <th scope="col">Unit price</th>
+                <th scope="col">Quantity</th>
+                <th scope="col">Line total</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="line : ${cart.lines()}" th:classappend="${line.insufficientStock()} ? 'warning'">
+                <td>
+                    <a th:href="@{/products/{id}(id=${line.productId()})}" th:text="${line.name()}">Name</a>
+                    <p class="stock-warning" th:if="${line.insufficientStock()}"
+                       th:text="'Only ' + ${line.availableStock()} + ' left in stock. Please lower the quantity.'">
+                        Only N left in stock
+                    </p>
+                </td>
+                <td th:text="${@moneyFormatter.format(line.unitPrice())}">$0.00</td>
+                <td>
+                    <form class="inline" th:action="@{/cart/items/{id}(id=${line.productId()})}" method="post">
+                        <label class="visually-hidden" th:for="'qty-' + ${line.productId()}">Quantity</label>
+                        <input type="number" name="quantity" min="0" max="99" step="1"
+                               th:id="'qty-' + ${line.productId()}" th:value="${line.quantity()}">
+                        <button type="submit">Update</button>
+                    </form>
+                </td>
+                <td th:text="${@moneyFormatter.format(line.lineTotal())}">$0.00</td>
+                <td>
+                    <form class="inline" th:action="@{/cart/items/{id}/delete(id=${line.productId()})}" method="post">
+                        <button type="submit" class="link-button">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <dl class="totals">
+            <dt>Subtotal</dt>
+            <dd th:text="${@moneyFormatter.format(cart.subtotal())}">$0.00</dd>
+            <dt>Total</dt>
+            <dd class="total" th:text="${@moneyFormatter.format(cart.total())}">$0.00</dd>
+        </dl>
+
+        <p class="flash flash-warning" th:unless="${cart.checkoutAllowed()}">
+            Some items exceed the available stock. Please update the quantities before checking out.
+        </p>
+        <a class="button primary" th:if="${cart.checkoutAllowed()}" th:href="@{/checkout}">Proceed to checkout</a>
+    </div>
+</main>
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>
