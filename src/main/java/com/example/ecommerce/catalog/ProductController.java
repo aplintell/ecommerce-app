@@ -1,5 +1,8 @@
 package com.example.ecommerce.catalog;
 
+import java.util.List;
+import java.util.stream.Stream;
+
 import com.example.ecommerce.cart.AddToCartForm;
 
 import org.springframework.data.domain.Page;
@@ -27,9 +30,14 @@ public class ProductController {
     public String list(@RequestParam(required = false) String q,
                        @RequestParam(required = false) String category,
                        @RequestParam(required = false) String page,
+                       @RequestParam(required = false) String size,
                        Model model) {
-        Page<Product> result = catalogService.listProducts(category, q, page);
+        Page<Product> result = catalogService.listProducts(category, q, page, size);
+        int pageSize = result.getSize();
         model.addAttribute("page", result);
+        model.addAttribute("pageSizeOptions", pageSizeOptions(pageSize));
+        // Only set for a non-default size, so that header links and the search form stay clean otherwise.
+        model.addAttribute("customPageSize", pageSize == CatalogService.DEFAULT_PAGE_SIZE ? null : pageSize);
         model.addAttribute("selectedCategory", CatalogService.normalize(category));
         model.addAttribute("q", CatalogService.normalize(q));
         return "products/list";
@@ -44,5 +52,13 @@ public class ProductController {
         form.setQuantity(1);
         model.addAttribute("addToCartForm", form);
         return "products/detail";
+    }
+
+    /** The standard options plus the current size, so that the control always shows what is on screen. */
+    private static List<Integer> pageSizeOptions(int currentSize) {
+        return Stream.concat(CatalogService.PAGE_SIZE_OPTIONS.stream(), Stream.of(currentSize))
+                .distinct()
+                .sorted()
+                .toList();
     }
 }

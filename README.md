@@ -28,6 +28,10 @@ PowerShell: `$env:JAVA_HOME="C:\Program Files\Java\jdk-21"`, Git Bash: `export J
 Open http://localhost:8080. The app uses an in-memory H2 database (MySQL mode); Flyway creates the schema
 and seeds 4 categories and 20 products on every start. Data is lost when the app stops.
 
+The product list shows 12 products per page. Shoppers can change this with the "Products per page" control,
+which sets the `size` query parameter (`/products?size=4`), so reloading or sharing the URL keeps it. A missing,
+non-integer, zero or negative `size` falls back to 12, and values above 100 are reduced to 100.
+
 ## Run (prod profile, MySQL 8)
 
 The `prod` profile reads the datasource from environment variables:

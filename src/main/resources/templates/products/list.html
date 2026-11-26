@@ -11,8 +11,20 @@
 
     <div th:if="${page.content.isEmpty()}" class="empty">
         <p>No products found</p>
-        <a th:href="@{/products(q=${q},category=${selectedCategory},page=0)}">Back to first page</a>
+        <a th:href="@{/products(q=${q},category=${selectedCategory},page=0,size=${page.size})}">Back to first page</a>
     </div>
+
+    <!-- No "page" field on purpose: changing the size always starts again at the first page. -->
+    <form class="page-size" th:if="${page.totalElements > 0}" th:action="@{/products}" method="get">
+        <input type="hidden" name="q" th:if="${q != null}" th:value="${q}">
+        <input type="hidden" name="category" th:if="${selectedCategory != null}" th:value="${selectedCategory}">
+        <label for="page-size">Products per page</label>
+        <select id="page-size" name="size" autocomplete="off">
+            <option th:each="s : ${pageSizeOptions}" th:value="${s}" th:text="${s}"
+                    th:selected="${s == page.size}">12</option>
+        </select>
+        <button type="submit">Apply</button>
+    </form>
 
     <ul class="product-grid" th:unless="${page.content.isEmpty()}">
         <li class="product-card" th:each="p : ${page.content}">
@@ -29,12 +41,15 @@
 
     <nav class="pagination" th:if="${page.totalPages > 1}" aria-label="Pagination">
         <a th:if="${page.hasPrevious()}"
-           th:href="@{/products(q=${q},category=${selectedCategory},page=${page.number - 1})}">&laquo; Previous</a>
-        <span th:text="'Page ' + ${page.number + 1} + ' of ' + ${page.totalPages}">Page 1 of 1</span>
+           th:href="@{/products(q=${q},category=${selectedCategory},page=${page.number - 1},size=${page.size})}"
+           class="button pagination-prev">&laquo; Previous</a>
+        <span class="pagination-status" th:text="'Page ' + ${page.number + 1} + ' of ' + ${page.totalPages}">Page 1 of 1</span>
         <a th:if="${page.hasNext()}"
-           th:href="@{/products(q=${q},category=${selectedCategory},page=${page.number + 1})}">Next &raquo;</a>
+           th:href="@{/products(q=${q},category=${selectedCategory},page=${page.number + 1},size=${page.size})}"
+           class="button pagination-next">Next &raquo;</a>
     </nav>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>
+<script th:src="@{/js/page-size.js}"></script>
 </body>
 </html>

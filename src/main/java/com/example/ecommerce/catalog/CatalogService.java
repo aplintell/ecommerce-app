@@ -15,7 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CatalogService {
 
-    public static final int PAGE_SIZE = 12;
+    public static final int DEFAULT_PAGE_SIZE = 12;
+
+    /** Upper bound for a requested page size, so that one request cannot load the whole catalog. */
+    public static final int MAX_PAGE_SIZE = 100;
+
+    /** Page sizes offered by the product list control. Other values up to the maximum can come from the URL. */
+    public static final List<Integer> PAGE_SIZE_OPTIONS = List.of(4, 8, 12, 20, 48);
 
     private final ProductRepository productRepository;
 
@@ -23,10 +29,12 @@ public class CatalogService {
         this.productRepository = productRepository;
     }
 
-    public Page<Product> listProducts(String categorySlug, String q, String pageParam) {
+    public Page<Product> listProducts(String categorySlug, String q, String pageParam, String sizeParam) {
         String slug = normalize(categorySlug);
         String term = normalize(q);
-        int page = parsePage(pageParam);
+        int size = parseSize(sizeParam);
+        // Spring Data rejects offsets above Integer.MAX_VALUE, so cap the page index for this size.
+        int page = Math.min(parsePage(pageParam), Integer.MAX_VALUE / size);
 
         List<Specification<Product>> specs = new ArrayList<>();
         specs.add(ProductSpecifications.active());
@@ -36,7 +44,7 @@ public class CatalogService {
         if (term != null) {
             specs.add(ProductSpecifications.matches(term));
         }
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("name").ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
         return productRepository.findAll(Specification.allOf(specs), pageable);
     }
 
@@ -63,6 +71,22 @@ public class CatalogService {
             return Math.max(Integer.parseInt(pageParam.trim()), 0);
         } catch (NumberFormatException e) {
             return 0;
+        }
+    }
+
+    /**
+     * Null, blank, non-integer, zero or negative values become the default size.
+     * Values above the maximum are reduced to the maximum.
+     */
+    static int parseSize(String sizeParam) {
+        if (sizeParam == null) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        try {
+            int size = Integer.parseInt(sizeParam.trim());
+            return size > 0 ? Math.min(size, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+        } catch (NumberFormatException e) {
+            return DEFAULT_PAGE_SIZE;
         }
     }
 }

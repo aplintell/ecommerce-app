@@ -13,6 +13,9 @@ import java.util.regex.Pattern;
 import com.example.ecommerce.support.SeedData;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -201,6 +204,124 @@ class ProductControllerTest {
         assertThat(html).contains("Page 1 of 2");
     }
 
+    // The seed has 19 active products and 5 active books.
+    @ParameterizedTest(name = "size={0}, category={1}: {2} cards, {3} pages")
+    @CsvSource({
+            "4,   ,      4,  5",
+            "8,   ,      8,  3",
+            "20,  ,      19, 1",
+            "19,  ,      19, 1",
+            "18,  ,      18, 2",
+            "8,   books, 5,  1",
+            "5,   books, 5,  1",
+            "4,   books, 4,  2",
+            "1,   ,      1,  19"
+    })
+    void sizeShouldLimitProductsAndRecalculatePages(String size, String category, int cards, int pages)
+            throws Exception {
+        MockHttpServletRequestBuilder request = get("/products").param("size", size);
+        if (category != null) {
+            request.param("category", category);
+        }
+
+        String html = body(request);
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(cards);
+        if (pages > 1) {
+            assertThat(html).contains("Page 1 of " + pages);
+        } else {
+            assertThat(html).doesNotContain("class=\"pagination\"");
+        }
+        assertThat(html).containsPattern("<option value=\"" + size + "\"\\s+selected=\"selected\">");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "0", "-4", "2.5", "abc", "1e3", "99999999999"})
+    void invalidSizeShouldFallBackToDefault(String size) throws Exception {
+        String html = body(get("/products").param("size", size));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(12);
+        assertThat(html).contains("Page 1 of 2");
+        assertThat(html).containsPattern("<option value=\"12\"\\s+selected=\"selected\">");
+    }
+
+    @Test
+    void sizeAboveMaximumShouldBeCapped() throws Exception {
+        String html = body(get("/products").param("size", "5000"));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(19);
+        assertThat(html).containsPattern("<option value=\"100\"\\s+selected=\"selected\">");
+        assertThat(html).doesNotContain("value=\"5000\"");
+    }
+
+    @Test
+    void lastPageShouldShowRemainingProducts() throws Exception {
+        String html = body(get("/products").param("size", "4").param("page", "4"));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(3);
+        assertThat(html).contains("class=\"pagination-status\">Page 5 of 5<", "Previous").doesNotContain("Next &raquo;");
+    }
+
+    @Test
+    void paginationLinksShouldKeepSizeAndFilters() throws Exception {
+        String html = body(get("/products").param("q", "e").param("size", "4").param("page", "1"));
+
+        assertThat(linkBefore(html, "&laquo; Previous")).contains("q=e", "page=0", "size=4");
+        assertThat(linkBefore(html, "Next &raquo;")).contains("q=e", "page=2", "size=4");
+    }
+
+    @Test
+    void sizeFormShouldKeepFiltersAndResetToFirstPage() throws Exception {
+        String html = body(get("/products").param("q", "o").param("category", "electronics")
+                .param("size", "4").param("page", "1"));
+
+        Matcher form = Pattern.compile("(?s)<form class=\"page-size\".*?</form>").matcher(html);
+        assertThat(form.find()).as("page size form").isTrue();
+        assertThat(form.group())
+                .containsPattern("name=\"q\"\\s+value=\"o\"")
+                .containsPattern("name=\"category\"\\s+value=\"electronics\"")
+                .doesNotContain("name=\"page\"");
+    }
+
+    @Test
+    void headerShouldKeepCustomSizeForCategoryAndSearch() throws Exception {
+        String html = body(get("/products").param("size", "4"));
+
+        assertThat(html).contains("href=\"/products?size=4\"",
+                "href=\"/products?category=books&amp;size=4\"");
+        assertThat(html).containsPattern("name=\"size\"\\s+value=\"4\"");
+    }
+
+    @Test
+    void headerShouldOmitDefaultSize() throws Exception {
+        String html = body(get("/products").param("size", "12"));
+
+        assertThat(html).contains("href=\"/products\"", "href=\"/products?category=books\"");
+        assertThat(html).doesNotContain("type=\"hidden\" name=\"size\"");
+    }
+
+    @Test
+    void pageBeyondLastShouldOfferFirstPageWithSameSize() throws Exception {
+        String html = body(get("/products").param("size", "20").param("page", "3"));
+
+        assertThat(html).contains("No products found");
+        assertThat(linkBefore(html, "Back to first page")).contains("page=0", "size=20");
+    }
+
+    @Test
+    void hugePageShouldShowEmptyResultInsteadOfFailing() throws Exception {
+        String html = body(get("/products").param("page", "2147483647").param("size", "100"));
+
+        assertThat(html).contains("No products found");
+    }
+
+    @Test
+    void emptyResultShouldHideSizeControl() throws Exception {
+        String html = body(get("/products").param("category", "no-such-thing"));
+
+        assertThat(html).doesNotContain("class=\"page-size\"");
+    }
+
     @Test
     void detailShouldShowProductWithAddToCartForm() throws Exception {
         long id = SeedData.idOf(jdbc, "ELEC-001");
@@ -255,6 +376,12 @@ class ProductControllerTest {
                 .andExpect(view().name("error/404"))
                 .andReturn();
         assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8)).contains("Not found");
+    }
+
+    private static String linkBefore(String html, String text) {
+        Matcher link = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>" + Pattern.quote(text)).matcher(html);
+        assertThat(link.find()).as(text + " link present").isTrue();
+        return link.group(1);
     }
 
     private static int countOccurrences(String haystack, String needle) {
