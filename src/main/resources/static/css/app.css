@@ -45,6 +45,13 @@ button[disabled] { background: #c4ccd5; border-color: #c4ccd5; color: #4b5563; c
 .add-to-cart { display: flex; align-items: center; gap: .5rem; margin-top: 1rem; }
 .add-to-cart input[type=number] { width: 5rem; }
 
+.list-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+.list-toolbar h1 { margin: .5rem 0; }
+.page-size { display: inline-flex; align-items: center; gap: .5rem; }
+.page-size .button { min-width: 2.25rem; text-align: center; padding: .3rem .6rem; font-weight: 700; }
+.page-size .button.disabled { color: #9aa5b1; background: #f1f3f5; cursor: not-allowed; }
+.page-size-value { white-space: nowrap; }
+
 .pagination { display: flex; gap: 1rem; align-items: center; justify-content: center; margin: 1.5rem 0; }
 
 .flash { padding: .75rem 1rem; border-radius: 4px; margin: 0 0 1rem; }

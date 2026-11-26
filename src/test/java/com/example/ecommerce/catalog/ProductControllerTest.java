@@ -202,6 +202,69 @@ class ProductControllerTest {
     }
 
     @Test
+    void listShouldShowPageSizeControlWithDefaultTwelve() throws Exception {
+        String html = body(get("/products"));
+
+        assertThat(html).contains("<strong>12</strong> per page");
+        assertThat(hrefOf(html, "Show fewer products per page")).contains("size=8").contains("page=0");
+        assertThat(hrefOf(html, "Show more products per page")).contains("size=16").contains("page=0");
+    }
+
+    @Test
+    void smallerPageSizeShouldShowFewerProductsAndMorePages() throws Exception {
+        String html = body(get("/products").param("size", "4"));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(4);
+        assertThat(html).contains("Page 1 of 5", "<strong>4</strong> per page");
+        assertThat(html).doesNotContain("aria-label=\"Show fewer products per page\"");
+        assertThat(hrefOf(html, "Show more products per page")).contains("size=8");
+    }
+
+    @Test
+    void largerPageSizeShouldShowMoreProductsAndFewerPages() throws Exception {
+        String html = body(get("/products").param("size", "16"));
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(16);
+        assertThat(html).contains("Page 1 of 2");
+
+        String all = body(get("/products").param("size", "24"));
+        assertThat(countOccurrences(all, "class=\"product-card\"")).isEqualTo(19);
+        assertThat(all).doesNotContain("class=\"pagination\"");
+        assertThat(all).doesNotContain("aria-label=\"Show more products per page\"");
+        assertThat(hrefOf(all, "Show fewer products per page")).contains("size=20");
+    }
+
+    @Test
+    void invalidPageSizeShouldFallBackToTwelve() throws Exception {
+        for (String size : new String[] {"abc", "-4", "0", "7", "28", "1000"}) {
+            String html = body(get("/products").param("size", size));
+            assertThat(countOccurrences(html, "class=\"product-card\"")).as("size=%s", size).isEqualTo(12);
+            assertThat(html).as("size=%s", size).contains("Page 1 of 2", "<strong>12</strong> per page");
+        }
+    }
+
+    @Test
+    void pageSizeShouldBeKeptByPaginationSearchAndCategoryLinks() throws Exception {
+        String html = body(get("/products").param("size", "8").param("q", "e"));
+
+        Matcher next = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>Next").matcher(html);
+        assertThat(next.find()).as("next link present").isTrue();
+        assertThat(next.group(1)).contains("size=8").contains("q=e").contains("page=1");
+        assertThat(hrefOf(html, "Show more products per page")).contains("q=e").contains("size=12");
+        assertThat(html).containsPattern("<input[^>]*name=\"size\"[^>]*value=\"8\"");
+        Matcher books = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>Books</a>").matcher(html);
+        assertThat(books.find()).isTrue();
+        assertThat(books.group(1)).contains("category=books").contains("size=8");
+    }
+
+    @Test
+    void secondPageShouldRespectPageSize() throws Exception {
+        String html = body(get("/products").param("size", "16").param("page", "1"));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(3);
+        assertThat(html).contains("Page 2 of 2");
+    }
+
+    @Test
     void detailShouldShowProductWithAddToCartForm() throws Exception {
         long id = SeedData.idOf(jdbc, "ELEC-001");
 
@@ -255,6 +318,12 @@ class ProductControllerTest {
                 .andExpect(view().name("error/404"))
                 .andReturn();
         assertThat(result.getResponse().getContentAsString(StandardCharsets.UTF_8)).contains("Not found");
+    }
+
+    private static String hrefOf(String html, String ariaLabel) {
+        Matcher link = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*aria-label=\"" + ariaLabel + "\"").matcher(html);
+        assertThat(link.find()).as("link '%s' present", ariaLabel).isTrue();
+        return link.group(1).replace("&amp;", "&");
     }
 
     private static int countOccurrences(String haystack, String needle) {

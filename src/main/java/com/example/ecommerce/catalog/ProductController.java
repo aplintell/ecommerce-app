@@ -27,9 +27,16 @@ public class ProductController {
     public String list(@RequestParam(required = false) String q,
                        @RequestParam(required = false) String category,
                        @RequestParam(required = false) String page,
+                       @RequestParam(required = false) String size,
                        Model model) {
-        Page<Product> result = catalogService.listProducts(category, q, page);
+        int pageSize = CatalogService.parsePageSize(size);
+        Page<Product> result = catalogService.listProducts(category, q, page, pageSize);
         model.addAttribute("page", result);
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("fewerPageSize",
+                pageSize > CatalogService.MIN_PAGE_SIZE ? pageSize - CatalogService.PAGE_SIZE_STEP : null);
+        model.addAttribute("morePageSize",
+                pageSize < CatalogService.MAX_PAGE_SIZE ? pageSize + CatalogService.PAGE_SIZE_STEP : null);
         model.addAttribute("selectedCategory", CatalogService.normalize(category));
         model.addAttribute("q", CatalogService.normalize(q));
         return "products/list";
