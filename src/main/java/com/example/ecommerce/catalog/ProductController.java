@@ -27,9 +27,15 @@ public class ProductController {
     public String list(@RequestParam(required = false) String q,
                        @RequestParam(required = false) String category,
                        @RequestParam(required = false) String page,
+                       @RequestParam(required = false) String size,
                        Model model) {
-        Page<Product> result = catalogService.listProducts(category, q, page);
+        Page<Product> result = catalogService.listProducts(category, q, page, size);
+        int pageSize = CatalogService.parsePageSize(size);
         model.addAttribute("page", result);
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("pageSizeOptions", CatalogService.PAGE_SIZE_OPTIONS);
+        // Null for the default so links stay clean (Thymeleaf omits null URL params).
+        model.addAttribute("sizeParam", pageSize == CatalogService.DEFAULT_PAGE_SIZE ? null : pageSize);
         model.addAttribute("selectedCategory", CatalogService.normalize(category));
         model.addAttribute("q", CatalogService.normalize(q));
         return "products/list";

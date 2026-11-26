@@ -133,6 +133,36 @@ class ProductRepositoryTest {
     }
 
     @Test
+    void catalogServiceShouldApplyChosenPageSize() {
+        CatalogService service = new CatalogService(productRepository);
+
+        Page<Product> eight = service.listProducts(null, null, null, "8");
+        assertThat(eight.getContent()).hasSize(8);
+        assertThat(eight.getTotalPages()).isEqualTo(3);
+
+        Page<Product> lastOfEight = service.listProducts(null, null, "2", "8");
+        assertThat(lastOfEight.getContent()).hasSize(ACTIVE_PRODUCTS - 16);
+
+        Page<Product> all = service.listProducts(null, null, null, "24");
+        assertThat(all.getContent()).hasSize(ACTIVE_PRODUCTS);
+        assertThat(all.getTotalPages()).isEqualTo(1);
+
+        for (String bad : new String[] {null, "", " ", "abc", "7", "-1", "0", "1000"}) {
+            assertThat(service.listProducts(null, null, null, bad).getSize()).as("size=%s", bad).isEqualTo(12);
+        }
+    }
+
+    @Test
+    void parsePageSizeShouldAcceptOnlyAllowedOptions() {
+        for (int option : CatalogService.PAGE_SIZE_OPTIONS) {
+            assertThat(CatalogService.parsePageSize(String.valueOf(option))).isEqualTo(option);
+        }
+        assertThat(CatalogService.parsePageSize(" 16 ")).isEqualTo(16);
+        assertThat(CatalogService.parsePageSize("5")).isEqualTo(CatalogService.DEFAULT_PAGE_SIZE);
+        assertThat(CatalogService.parsePageSize("2147483648")).isEqualTo(CatalogService.DEFAULT_PAGE_SIZE);
+    }
+
+    @Test
     void listShouldBeSortedByNameWithCategoryFetched() {
         CatalogService service = new CatalogService(productRepository);
 

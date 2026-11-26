@@ -202,6 +202,68 @@ class ProductControllerTest {
     }
 
     @Test
+    void pageSizeShouldControlProductsPerPageAndBeKeptInLinks() throws Exception {
+        String html = body(get("/products").param("size", "8"));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(8);
+        assertThat(html).contains("Page 1 of 3");
+        assertThat(html).containsPattern("<option value=\"8\" selected=\"selected\">8</option>");
+        Matcher next = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>Next").matcher(html);
+        assertThat(next.find()).isTrue();
+        assertThat(next.group(1)).contains("size=8").contains("page=1");
+
+        String last = body(get("/products").param("size", "8").param("page", "2"));
+        assertThat(countOccurrences(last, "class=\"product-card\"")).isEqualTo(3);
+        assertThat(last).contains("Page 3 of 3");
+    }
+
+    @Test
+    void largestPageSizeShouldShowAllProductsWithoutPagination() throws Exception {
+        String html = body(get("/products").param("size", "24"));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(19);
+        assertThat(html).doesNotContain("class=\"pagination\"");
+    }
+
+    @Test
+    void invalidPageSizeShouldFallBackToTwelve() throws Exception {
+        for (String size : new String[] {"abc", "7", "-1", "1000", ""}) {
+            String html = body(get("/products").param("size", size));
+            assertThat(countOccurrences(html, "class=\"product-card\"")).as("size=%s", size).isEqualTo(12);
+            assertThat(html).containsPattern("<option value=\"12\" selected=\"selected\">12</option>");
+        }
+    }
+
+    @Test
+    void defaultPageSizeShouldNotAddSizeToLinks() throws Exception {
+        String html = body(get("/products"));
+
+        Matcher next = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>Next").matcher(html);
+        assertThat(next.find()).isTrue();
+        // Thymeleaf renders null params as empty ("size=&"), which falls back to the default.
+        assertThat(next.group(1)).doesNotContainPattern("size=\\d");
+        assertThat(html).doesNotContain("name=\"size\" value=");
+    }
+
+    @Test
+    void pageSizeShouldBeKeptWithSearchAndCategoryNavigation() throws Exception {
+        String html = body(get("/products").param("q", "e").param("size", "4"));
+
+        // The per-page form keeps the search term.
+        assertThat(html).containsPattern(
+                "<form class=\"list-toolbar\"[\\s\\S]*?<input type=\"hidden\" name=\"q\" value=\"e\">");
+        Matcher next = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>Next").matcher(html);
+        assertThat(next.find()).isTrue();
+        assertThat(next.group(1)).contains("q=e").contains("size=4");
+
+        // Header: category links and the search form carry the chosen size.
+        Matcher books = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>Books</a>").matcher(html);
+        assertThat(books.find()).isTrue();
+        assertThat(books.group(1)).contains("category=books").contains("size=4");
+        assertThat(html).contains("<input type=\"hidden\" name=\"size\" value=\"4\">");
+    }
+
+    @Test
     void detailShouldShowProductWithAddToCartForm() throws Exception {
         long id = SeedData.idOf(jdbc, "ELEC-001");
 

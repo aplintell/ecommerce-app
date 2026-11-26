@@ -15,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CatalogService {
 
-    public static final int PAGE_SIZE = 12;
+    public static final int DEFAULT_PAGE_SIZE = 12;
+
+    /** Products-per-page values a shopper may choose. Anything else falls back to the default. */
+    public static final List<Integer> PAGE_SIZE_OPTIONS = List.of(4, 8, 12, 16, 20, 24);
 
     private final ProductRepository productRepository;
 
@@ -24,9 +27,14 @@ public class CatalogService {
     }
 
     public Page<Product> listProducts(String categorySlug, String q, String pageParam) {
+        return listProducts(categorySlug, q, pageParam, null);
+    }
+
+    public Page<Product> listProducts(String categorySlug, String q, String pageParam, String sizeParam) {
         String slug = normalize(categorySlug);
         String term = normalize(q);
         int page = parsePage(pageParam);
+        int size = parsePageSize(sizeParam);
 
         List<Specification<Product>> specs = new ArrayList<>();
         specs.add(ProductSpecifications.active());
@@ -36,7 +44,7 @@ public class CatalogService {
         if (term != null) {
             specs.add(ProductSpecifications.matches(term));
         }
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("name").ascending());
+        Pageable pageable = PageRequest.of(page, size,Sort.by("name").ascending());
         return productRepository.findAll(Specification.allOf(specs), pageable);
     }
 
@@ -52,6 +60,19 @@ public class CatalogService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    /** Values outside {@link #PAGE_SIZE_OPTIONS} (null, blank, non-numeric, 7, 1000...) become the default. */
+    public static int parsePageSize(String sizeParam) {
+        if (sizeParam == null) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        try {
+            int size = Integer.parseInt(sizeParam.trim());
+            return PAGE_SIZE_OPTIONS.contains(size) ? size : DEFAULT_PAGE_SIZE;
+        } catch (NumberFormatException e) {
+            return DEFAULT_PAGE_SIZE;
+        }
     }
 
     /** Null, non-numeric or negative values become page 0. */
