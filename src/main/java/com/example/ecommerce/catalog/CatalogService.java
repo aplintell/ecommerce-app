@@ -15,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CatalogService {
 
-    public static final int PAGE_SIZE = 12;
+    /** Page sizes a visitor may choose. Anything else falls back to {@link #DEFAULT_PAGE_SIZE}. */
+    public static final List<Integer> PAGE_SIZES = List.of(12, 24, 48);
+
+    public static final int DEFAULT_PAGE_SIZE = 12;
 
     private final ProductRepository productRepository;
 
@@ -23,7 +26,7 @@ public class CatalogService {
         this.productRepository = productRepository;
     }
 
-    public Page<Product> listProducts(String categorySlug, String q, String pageParam) {
+    public Page<Product> listProducts(String categorySlug, String q, String pageParam, int size) {
         String slug = normalize(categorySlug);
         String term = normalize(q);
         int page = parsePage(pageParam);
@@ -36,7 +39,7 @@ public class CatalogService {
         if (term != null) {
             specs.add(ProductSpecifications.matches(term));
         }
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("name").ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
         return productRepository.findAll(Specification.allOf(specs), pageable);
     }
 
@@ -52,6 +55,22 @@ public class CatalogService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    /**
+     * Returns the requested page size if it is one of {@link #PAGE_SIZES}, otherwise the default.
+     * The allowlist keeps clients from requesting arbitrarily large pages.
+     */
+    public static int parsePageSize(String sizeParam) {
+        if (sizeParam == null) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        try {
+            int size = Integer.parseInt(sizeParam.trim());
+            return PAGE_SIZES.contains(size) ? size : DEFAULT_PAGE_SIZE;
+        } catch (NumberFormatException e) {
+            return DEFAULT_PAGE_SIZE;
+        }
     }
 
     /** Null, non-numeric or negative values become page 0. */

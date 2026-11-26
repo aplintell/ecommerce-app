@@ -27,9 +27,15 @@ public class ProductController {
     public String list(@RequestParam(required = false) String q,
                        @RequestParam(required = false) String category,
                        @RequestParam(required = false) String page,
+                       @RequestParam(required = false) String size,
                        Model model) {
-        Page<Product> result = catalogService.listProducts(category, q, page);
+        int pageSize = CatalogService.parsePageSize(size);
+        Page<Product> result = catalogService.listProducts(category, q, page, pageSize);
         model.addAttribute("page", result);
+        model.addAttribute("size", pageSize);
+        model.addAttribute("pageSizes", CatalogService.PAGE_SIZES);
+        // Header links carry the chosen size only when it differs from the default, keeping default URLs clean.
+        model.addAttribute("sizeParam", pageSize == CatalogService.DEFAULT_PAGE_SIZE ? null : pageSize);
         model.addAttribute("selectedCategory", CatalogService.normalize(category));
         model.addAttribute("q", CatalogService.normalize(q));
         return "products/list";

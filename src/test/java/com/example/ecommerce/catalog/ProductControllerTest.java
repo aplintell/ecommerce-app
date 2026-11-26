@@ -202,6 +202,60 @@ class ProductControllerTest {
     }
 
     @Test
+    void pageSizeSelectorShouldDefaultToTwelve() throws Exception {
+        String html = body(get("/products"));
+
+        assertThat(html).containsPattern("<select[^>]*name=\"size\"");
+        assertThat(html).containsPattern("<option value=\"12\" selected=\"selected\">12</option>");
+        assertThat(html).contains("<option value=\"24\">24</option>", "<option value=\"48\">48</option>");
+        assertThat(html).contains("Showing 1–12 of 19");
+    }
+
+    @Test
+    void largerPageSizeShouldShowAllProductsOnOnePage() throws Exception {
+        String html = body(get("/products").param("size", "24"));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(19);
+        assertThat(html).doesNotContain("Page 1 of");
+        assertThat(html).containsPattern("<option value=\"24\" selected=\"selected\">24</option>");
+        assertThat(html).contains("Showing 1–19 of 19");
+    }
+
+    @Test
+    void disallowedPageSizeShouldFallBackToDefault() throws Exception {
+        for (String size : new String[] {"5", "100000", "abc", "-12", ""}) {
+            String html = body(get("/products").param("size", size));
+            assertThat(countOccurrences(html, "class=\"product-card\"")).as("size=%s", size).isEqualTo(12);
+            assertThat(html).contains("Page 1 of 2");
+        }
+    }
+
+    @Test
+    void paginationAndHeaderLinksShouldKeepNonDefaultPageSize() throws Exception {
+        // "e" matches more than 12 active products, so with size 12 there is a next page.
+        String html = body(get("/products").param("q", "e").param("size", "12"));
+        Matcher next = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>Next").matcher(html);
+        assertThat(next.find()).isTrue();
+        assertThat(next.group(1)).contains("size=12").contains("page=1");
+        // Default size is not repeated in header links.
+        assertThat(html).contains("href=\"/products?category=books\"");
+
+        String sized = body(get("/products").param("size", "48"));
+        assertThat(sized).contains("href=\"/products?category=books&amp;size=48\"");
+        assertThat(sized).containsPattern("<input type=\"hidden\" name=\"size\" value=\"48\">");
+    }
+
+    @Test
+    void pageSizeFormShouldKeepSearchTermAndCategory() throws Exception {
+        String html = body(get("/products").param("q", "cotton").param("category", "clothing"));
+
+        Matcher form = Pattern.compile("<form class=\"page-size\".*?</form>", Pattern.DOTALL).matcher(html);
+        assertThat(form.find()).isTrue();
+        assertThat(form.group()).contains("name=\"q\" value=\"cotton\"", "name=\"category\" value=\"clothing\"");
+        assertThat(form.group()).doesNotContain("name=\"page\"");
+    }
+
+    @Test
     void detailShouldShowProductWithAddToCartForm() throws Exception {
         long id = SeedData.idOf(jdbc, "ELEC-001");
 

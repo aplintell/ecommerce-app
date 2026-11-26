@@ -15,14 +15,15 @@
             <input type="search" name="q" placeholder="Search products" aria-label="Search products"
                    th:value="${q}">
             <input type="hidden" name="category" th:if="${selectedCategory != null}" th:value="${selectedCategory}">
+            <input type="hidden" name="size" th:if="${sizeParam != null}" th:value="${sizeParam}">
             <button type="submit">Search</button>
         </form>
         <a class="cart-link" th:href="@{/cart}" th:text="'Cart (' + ${cartItemCount ?: 0} + ')'">Cart (0)</a>
     </div>
     <nav class="container category-nav" aria-label="Categories">
-        <a th:href="@{/products}" th:classappend="${selectedCategory == null and q == null} ? 'active'">All</a>
+        <a th:href="${sizeParam == null} ? @{/products} : @{/products(size=${sizeParam})}" th:classappend="${selectedCategory == null and q == null} ? 'active'">All</a>
         <a th:each="c : ${categories ?: {}}"
-           th:href="@{/products(category=${c.slug})}"
+           th:href="${sizeParam == null} ? @{/products(category=${c.slug})} : @{/products(category=${c.slug},size=${sizeParam})}"
            th:classappend="${selectedCategory != null and selectedCategory == c.slug} ? 'active'"
            th:attr="aria-current=${selectedCategory != null and selectedCategory == c.slug} ? 'page' : null"
            th:text="${c.name}">Category</a>

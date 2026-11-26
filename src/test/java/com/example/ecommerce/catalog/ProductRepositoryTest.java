@@ -119,15 +119,15 @@ class ProductRepositoryTest {
     void catalogServiceShouldIgnoreBlankQueryAndPageFallback() {
         CatalogService service = new CatalogService(productRepository);
 
-        Page<Product> blank = service.listProducts("  ", "   ", "abc");
+        Page<Product> blank = service.listProducts("  ", "   ", "abc", CatalogService.DEFAULT_PAGE_SIZE);
         assertThat(blank.getNumber()).isZero();
         assertThat(blank.getTotalElements()).isEqualTo(ACTIVE_PRODUCTS);
         assertThat(blank.getContent()).hasSize(12);
 
-        Page<Product> negative = service.listProducts(null, null, "-1");
+        Page<Product> negative = service.listProducts(null, null, "-1", CatalogService.DEFAULT_PAGE_SIZE);
         assertThat(negative.getNumber()).isZero();
 
-        Page<Product> second = service.listProducts(null, null, "1");
+        Page<Product> second = service.listProducts(null, null, "1", CatalogService.DEFAULT_PAGE_SIZE);
         assertThat(second.getNumber()).isEqualTo(1);
         assertThat(second.getContent()).hasSize(ACTIVE_PRODUCTS - 12);
     }
@@ -136,7 +136,7 @@ class ProductRepositoryTest {
     void listShouldBeSortedByNameWithCategoryFetched() {
         CatalogService service = new CatalogService(productRepository);
 
-        Page<Product> page = service.listProducts(null, null, null);
+        Page<Product> page = service.listProducts(null, null, null, CatalogService.DEFAULT_PAGE_SIZE);
 
         List<String> names = page.getContent().stream().map(Product::getName).toList();
         assertThat(names).isSorted();
