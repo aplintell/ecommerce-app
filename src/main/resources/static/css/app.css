@@ -47,6 +47,10 @@ button[disabled] { background: #c4ccd5; border-color: #c4ccd5; color: #4b5563; c
 
 .pagination { display: flex; gap: 1rem; align-items: center; justify-content: center; margin: 1.5rem 0; }
 
+.list-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
+.list-header h1 { margin: .5rem 0; }
+.page-size { display: flex; align-items: center; gap: .4rem; color: #6b7785; font-size: .95rem; }
+
 .flash { padding: .75rem 1rem; border-radius: 4px; margin: 0 0 1rem; }
 .flash-success { background: #ecfdf3; color: #067647; border: 1px solid #abefc6; }
 .flash-error { background: #fef3f2; color: #b42318; border: 1px solid #fecdca; }

@@ -15,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CatalogService {
 
-    public static final int PAGE_SIZE = 12;
+    public static final int DEFAULT_PAGE_SIZE = 12;
+
+    /** Page sizes a shopper can choose; any other value falls back to {@link #DEFAULT_PAGE_SIZE}. */
+    public static final List<Integer> PAGE_SIZE_OPTIONS = List.of(12, 24, 48, 96);
 
     private final ProductRepository productRepository;
 
@@ -23,10 +26,11 @@ public class CatalogService {
         this.productRepository = productRepository;
     }
 
-    public Page<Product> listProducts(String categorySlug, String q, String pageParam) {
+    public Page<Product> listProducts(String categorySlug, String q, String pageParam, String sizeParam) {
         String slug = normalize(categorySlug);
         String term = normalize(q);
         int page = parsePage(pageParam);
+        int size = parseSize(sizeParam);
 
         List<Specification<Product>> specs = new ArrayList<>();
         specs.add(ProductSpecifications.active());
@@ -36,7 +40,7 @@ public class CatalogService {
         if (term != null) {
             specs.add(ProductSpecifications.matches(term));
         }
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("name").ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
         return productRepository.findAll(Specification.allOf(specs), pageable);
     }
 
@@ -63,6 +67,19 @@ public class CatalogService {
             return Math.max(Integer.parseInt(pageParam.trim()), 0);
         } catch (NumberFormatException e) {
             return 0;
+        }
+    }
+
+    /** Null, non-numeric or unsupported values become {@link #DEFAULT_PAGE_SIZE}. */
+    static int parseSize(String sizeParam) {
+        if (sizeParam == null) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        try {
+            int size = Integer.parseInt(sizeParam.trim());
+            return PAGE_SIZE_OPTIONS.contains(size) ? size : DEFAULT_PAGE_SIZE;
+        } catch (NumberFormatException e) {
+            return DEFAULT_PAGE_SIZE;
         }
     }
 }

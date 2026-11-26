@@ -6,12 +6,25 @@
 <main class="container">
     <div th:replace="~{fragments/layout :: flash}"></div>
 
-    <h1>Products</h1>
+    <div class="list-header">
+        <h1>Products</h1>
+        <form class="page-size" th:action="@{/products}" method="get">
+            <input type="hidden" name="q" th:if="${q != null}" th:value="${q}">
+            <input type="hidden" name="category" th:if="${selectedCategory != null}" th:value="${selectedCategory}">
+            <label for="page-size">Show</label>
+            <select id="page-size" name="size" onchange="this.form.submit()">
+                <option th:each="s : ${pageSizeOptions}" th:value="${s}" th:text="${s}"
+                        th:selected="${s == page.size}">12</option>
+            </select>
+            <span>per page</span>
+            <noscript><button type="submit">Apply</button></noscript>
+        </form>
+    </div>
     <p class="muted" th:if="${q != null}">Results for "<span th:text="${q}">term</span>"</p>
 
     <div th:if="${page.content.isEmpty()}" class="empty">
         <p>No products found</p>
-        <a th:href="@{/products(q=${q},category=${selectedCategory},page=0)}">Back to first page</a>
+        <a th:href="@{/products(q=${q},category=${selectedCategory},size=${page.size},page=0)}">Back to first page</a>
     </div>
 
     <ul class="product-grid" th:unless="${page.content.isEmpty()}">
@@ -29,10 +42,10 @@
 
     <nav class="pagination" th:if="${page.totalPages > 1}" aria-label="Pagination">
         <a th:if="${page.hasPrevious()}"
-           th:href="@{/products(q=${q},category=${selectedCategory},page=${page.number - 1})}">&laquo; Previous</a>
+           th:href="@{/products(q=${q},category=${selectedCategory},size=${page.size},page=${page.number - 1})}">&laquo; Previous</a>
         <span th:text="'Page ' + ${page.number + 1} + ' of ' + ${page.totalPages}">Page 1 of 1</span>
         <a th:if="${page.hasNext()}"
-           th:href="@{/products(q=${q},category=${selectedCategory},page=${page.number + 1})}">Next &raquo;</a>
+           th:href="@{/products(q=${q},category=${selectedCategory},size=${page.size},page=${page.number + 1})}">Next &raquo;</a>
     </nav>
 </main>
 <footer th:replace="~{fragments/layout :: footer}"></footer>

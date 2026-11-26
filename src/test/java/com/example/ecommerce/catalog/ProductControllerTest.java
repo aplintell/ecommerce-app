@@ -202,6 +202,51 @@ class ProductControllerTest {
     }
 
     @Test
+    void pageSizeDropdownShouldDefaultToTwelve() throws Exception {
+        String html = body(get("/products"));
+
+        assertThat(html).containsPattern("<select[^>]*name=\"size\"");
+        for (int size : CatalogService.PAGE_SIZE_OPTIONS) {
+            assertThat(html).containsPattern("<option[^>]*value=\"" + size + "\"");
+        }
+        assertThat(html).containsPattern("<option[^>]*value=\"12\"[^>]*selected");
+    }
+
+    @Test
+    void chosenPageSizeShouldShowMoreProductsAndBeSelected() throws Exception {
+        String html = body(get("/products").param("size", "24"));
+
+        assertThat(countOccurrences(html, "class=\"product-card\"")).isEqualTo(19);
+        assertThat(html).contains("Mystery at Harbor Point", "Wireless Ergonomic Mouse");
+        assertThat(html).doesNotContain("class=\"pagination\"");
+        assertThat(html).containsPattern("<option[^>]*value=\"24\"[^>]*selected");
+        assertThat(html).doesNotContainPattern("<option[^>]*value=\"12\"[^>]*selected");
+    }
+
+    @Test
+    void unsupportedPageSizeShouldFallBackToTwelve() throws Exception {
+        for (String size : new String[] {"7", "abc", "-12", "1000"}) {
+            String html = body(get("/products").param("size", size));
+
+            assertThat(countOccurrences(html, "class=\"product-card\"")).as("size=" + size).isEqualTo(12);
+            assertThat(html).contains("Page 1 of 2");
+        }
+    }
+
+    @Test
+    void pageSizeFormAndPaginationLinksShouldKeepFilters() throws Exception {
+        String html = body(get("/products").param("q", "e").param("size", "12"));
+
+        Matcher form = Pattern.compile("<form class=\"page-size\".*?</form>", Pattern.DOTALL).matcher(html);
+        assertThat(form.find()).as("page size form present").isTrue();
+        assertThat(form.group()).containsPattern("<input[^>]*name=\"q\"[^>]*value=\"e\"");
+
+        Matcher next = Pattern.compile("<a[^>]*href=\"([^\"]*)\"[^>]*>Next").matcher(html);
+        assertThat(next.find()).as("next link present").isTrue();
+        assertThat(next.group(1)).contains("q=e").contains("size=12").contains("page=1");
+    }
+
+    @Test
     void detailShouldShowProductWithAddToCartForm() throws Exception {
         long id = SeedData.idOf(jdbc, "ELEC-001");
 

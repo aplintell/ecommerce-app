@@ -119,24 +119,37 @@ class ProductRepositoryTest {
     void catalogServiceShouldIgnoreBlankQueryAndPageFallback() {
         CatalogService service = new CatalogService(productRepository);
 
-        Page<Product> blank = service.listProducts("  ", "   ", "abc");
+        Page<Product> blank = service.listProducts("  ", "   ", "abc", null);
         assertThat(blank.getNumber()).isZero();
         assertThat(blank.getTotalElements()).isEqualTo(ACTIVE_PRODUCTS);
         assertThat(blank.getContent()).hasSize(12);
 
-        Page<Product> negative = service.listProducts(null, null, "-1");
+        Page<Product> negative = service.listProducts(null, null, "-1", null);
         assertThat(negative.getNumber()).isZero();
 
-        Page<Product> second = service.listProducts(null, null, "1");
+        Page<Product> second = service.listProducts(null, null, "1", null);
         assertThat(second.getNumber()).isEqualTo(1);
         assertThat(second.getContent()).hasSize(ACTIVE_PRODUCTS - 12);
+    }
+
+    @Test
+    void catalogServiceShouldUseChosenPageSizeAndFallBackToDefault() {
+        CatalogService service = new CatalogService(productRepository);
+
+        Page<Product> large = service.listProducts(null, null, null, "24");
+        assertThat(large.getSize()).isEqualTo(24);
+        assertThat(large.getContent()).hasSize(Math.min(ACTIVE_PRODUCTS, 24));
+
+        assertThat(service.listProducts(null, null, null, "7").getSize()).isEqualTo(12);
+        assertThat(service.listProducts(null, null, null, "abc").getSize()).isEqualTo(12);
+        assertThat(service.listProducts(null, null, null, "-24").getSize()).isEqualTo(12);
     }
 
     @Test
     void listShouldBeSortedByNameWithCategoryFetched() {
         CatalogService service = new CatalogService(productRepository);
 
-        Page<Product> page = service.listProducts(null, null, null);
+        Page<Product> page = service.listProducts(null, null, null, null);
 
         List<String> names = page.getContent().stream().map(Product::getName).toList();
         assertThat(names).isSorted();
